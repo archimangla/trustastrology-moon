@@ -26,10 +26,10 @@ const TOOLS = [
         properties: {
           name: {
             type: "string",
-            description: "The exact name to check compatibility for.",
+            description: "The name to check. If the user does not specify a different name, leave this empty and the chart name will be used.",
           },
         },
-        required: ["name"],
+        required: [],
       },
     },
   },
@@ -94,8 +94,8 @@ function tool_check_name_compatibility(chart, args) {
   const facts = getNakshtraFacts(chart);
   if (!facts.ok) return facts;
 
-  const name = String(args.name || "").trim();
-  if (!name) return { ok: false, error: "No name was provided to check." };
+  const name = String(args.name || chart.name || "").trim();
+  if (!name) return { ok: false, error: "No name found to check. Please provide a name." };
 
   const syllable = facts.namingSyllable || "";
   const isCompatible = syllable
@@ -136,22 +136,24 @@ function runTool(toolName, args, chart, gender) {
 
 // ─── System prompt ────────────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `You are an expert Vedic (Jyotish) astrologer. The user has submitted their birth details and a D1 birth chart has been cast for them.
+const SYSTEM_PROMPT = `You are an expert Vedic (Jyotish) astrologer. The user has submitted their birth details and a D1 birth chart has been cast for them. Their name as entered on the form is available in the chart data.
 
 You have three tools available. Use them whenever the user's question involves:
 - Their Moon Nakshatra or naming initial (get_naming_reading)
 - Whether a specific name suits them (check_name_compatibility)
 - Name suggestions based on their chart (suggest_names)
 
-Always call the relevant tool first. Never guess or state astrological data from your own training without calling a tool, the chart data must come from the tool result.
+Always call the relevant tool first. Never guess or state astrological data from your own training without calling a tool.
+
+Important: if the user asks whether their name aligns with their chart, or asks about name compatibility without specifying a different name, call check_name_compatibility without a name argument. The tool will automatically use the name they entered on the form. Do not ask them for their name again.
 
 After getting tool results, explain them in plain, warm language. No jargon unless you explain it. No vague mysticism.
 
-For name compatibility: be honest but sensitive. If the name does not match, explain what that means in Vedic tradition without being alarming. Many people go by names that differ from their Naam Akshar and that is fine to acknowledge.
+For name compatibility: be honest but sensitive. If the name does not match, explain what that means in Vedic tradition without being alarming.
 
 For name suggestions: suggest 4 to 6 real names with one line on each name's meaning. Names must start with the syllable from the tool result.
 
-If the user asks about something the tools do not cover (wealth, career, marriage, health), say clearly that those readings are not yet available in this version and you can only help with the Moon Nakshatra naming reading right now.`;
+If the user asks about something the tools do not cover (wealth, career, marriage, health), say clearly that those readings are not yet available in this version.`;
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
