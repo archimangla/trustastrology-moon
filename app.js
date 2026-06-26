@@ -51,8 +51,6 @@ const CITY_PRESETS = {
   Jaipur: { lat: 26.9124, lon: 75.7873, tz: 5.5 },
 };
 
-
-
 const HOUSES = [
   { points: "200,0 300,100 200,200 100,100", label: [200, 70] },   // 1
   { points: "0,0 200,0 100,100", label: [108, 38] },                // 2
@@ -68,11 +66,21 @@ const HOUSES = [
   { points: "400,0 300,100 200,0", label: [294, 38] },              // 12
 ];
 
-const state = { chart: null, gender: "", messages: [] };
+const state = { chart: null, d2: null, d10: null, gender: "", messages: [] };
 
-// Reads a fetch Response as JSON without throwing the cryptic
-// "Unexpected end of JSON input" error when the server sends back an
-// empty or non-JSON body (timeouts, cold-start hiccups, etc).
+async function fetchDivisionalChart(payload, chartType) {
+  try {
+    const res = await fetch("/api/chart", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...payload, chart: chartType }),
+    });
+    const data = await readJSON(res);
+    if (res.ok && data.chart) return data.chart;
+  } catch { }
+  return null;
+}
+
 async function readJSON(res) {
   const raw = await res.text();
   if (!raw) {
@@ -101,6 +109,7 @@ const chatThread = document.getElementById("chat-thread");
 const chatForm = document.getElementById("chat-form");
 const chatInput = document.getElementById("chat-input");
 const newChartBtn = document.getElementById("new-chart-btn");
+const topicChips = document.getElementById("topic-chips");
 
 Object.keys(CITY_PRESETS).forEach((city) => {
   const opt = document.createElement("option");
@@ -119,15 +128,21 @@ cityPreset.addEventListener("change", () => {
   form.timezone.value = preset.tz;
 });
 
-
+// Topic chip buttons -- each fires the pre-written question into chat
+topicChips.addEventListener("click", (e) => {
+  const chip = e.target.closest(".chip");
+  if (!chip || !state.chart) return;
+  const q = chip.dataset.q;
+  if (q) askAstrologer(q);
+});
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
   hideError();
 
   const fd = new FormData(form);
-  const dateVal = fd.get("date"); // YYYY-MM-DD
-  const timeVal = fd.get("time"); // HH:MM
+  const dateVal = fd.get("date");
+  const timeVal = fd.get("time");
   if (!dateVal || !timeVal) return showError("Please fill in both date and time of birth.");
 
   const [year, month, day] = dateVal.split("-").map(Number);
@@ -156,6 +171,8 @@ form.addEventListener("submit", async (e) => {
     if (!res.ok) throw new Error(data.error || "Couldn't cast the chart.");
 
     state.chart = data.chart;
+    state.d2 = null;
+    state.d10 = null;
     state.gender = payload.gender;
     state.messages = [];
     chatThread.innerHTML = "";
@@ -168,8 +185,12 @@ form.addEventListener("submit", async (e) => {
     appendEntry({
       role: "astrologer",
       who: "Astrologer",
-      text: "Chart cast for " + (data.chart.name || "you") + ". Ask me anything: what your naming initial should be, whether your current name aligns with your chart, or name suggestions based on your nakshatra.",
+      text: "Chart cast for " + (data.chart.name || "you") + ". You can ask me about marriage timing, your future spouse, wealth, career, children, Manglik dosha, naming -- or tap a topic below to get started.",
     });
+
+    // Fetch D2 (wealth) and D10 (career) in background -- non-blocking
+    fetchDivisionalChart(payload, "D2").then((c)  => { state.d2  = c; });
+    fetchDivisionalChart(payload, "D10").then((c) => { state.d10 = c; });
   } catch (err) {
     showError(err.message || "Something went wrong casting the chart.");
   } finally {
@@ -193,6 +214,8 @@ newChartBtn.addEventListener("click", () => {
   readingSection.classList.add("hidden");
   intakeSection.classList.remove("hidden");
   state.chart = null;
+  state.d2 = null;
+  state.d10 = null;
   state.messages = [];
 });
 
@@ -234,8 +257,6 @@ function renderChart(chart) {
   chartSvg.innerHTML = svg;
 }
 
-
-
 function appendEntry({ role, text, who, loading, error, onRetry }) {
   const div = document.createElement("div");
   div.className = `entry ${role}${loading ? " loading" : ""}${error ? " error" : ""}`;
@@ -264,7 +285,7 @@ async function sendToAPI() {
     const res = await fetch("/api/astrologer", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chart: state.chart, messages: state.messages, gender: state.gender }),
+      body: JSON.stringify({ chart: state.chart, d2: state.d2, d10: state.d10, messages: state.messages, gender: state.gender }),
     });
     const data = await readJSON(res);
     loadingEntry.remove();

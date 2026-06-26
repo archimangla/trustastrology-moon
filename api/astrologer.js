@@ -343,7 +343,7 @@ function tool_get_children_reading(chart, args, gender) {
 
 // ─── Wealth tools ─────────────────────────────────────────────────────────────
 
-function tool_get_wealth_potential(chart) {
+function tool_get_wealth_potential(chart, d2) {
   const ascRashiNum = getAscRashiNum(chart);
   if (!ascRashiNum) return { ok: false, error: "Ascendant data missing." };
 
@@ -379,6 +379,9 @@ function tool_get_wealth_potential(chart) {
     jupiter: { house: jupiter ? Number(jupiter.houseNum) : null, nakshatra: jupiter ? jupiter.nakshatra : null },
     venus: { house: venus ? Number(venus.houseNum) : null, sign: venus ? (venus.sign || venus.rashi) : null },
     moonInWealthNakshatra: moonInWealthNak, moonNakshatra: moonNak ? moonNak.name : null,
+    d2Available: !!d2,
+    d2AscendantSign: d2 ? (d2.ascendant?.sign || d2.ascendant?.rashi || null) : null,
+    note: d2 ? "D2 (Hora chart) loaded -- ascendant sign confirms wealth accumulation tendency." : "D2 chart not yet loaded. Wealth read from D1 only.",
   };
 }
 
@@ -554,11 +557,13 @@ const TOOLS = [
   { type: "function", function: { name: "get_income_sources", description: "Identify professions and income sources from the 10th house. Use when user asks about career, profession, or where their money comes from.", parameters: { type: "object", properties: {}, required: [] } } },
   { type: "function", function: { name: "get_financial_challenges", description: "Identify financial challenges, debt, and losses from 6th/8th/12th houses. Also shows protections. Use when user asks about financial problems or debt.", parameters: { type: "object", properties: {}, required: [] } } },
   { type: "function", function: { name: "get_overall_prosperity", description: "Lifetime prosperity arc -- how wealth builds over a lifetime, retirement and property wealth. Use when user asks about long-term financial future.", parameters: { type: "object", properties: {}, required: [] } } },
+  { type: "function", function: { name: "get_career_fields", description: "Identify career fields and industries suited to the person based on 10th house lord and Moon nakshatra. Uses D10 chart if available. Use when user asks what career, profession, or industry suits them.", parameters: { type: "object", properties: {}, required: [] } } },
+  { type: "function", function: { name: "get_career_role", description: "Identify the specific working style and role type from the 10th lord Pada and Amatyakaraka. Use when user asks what kind of work they do best, their working style, or specific job roles.", parameters: { type: "object", properties: {}, required: [] } } },
 ];
 
 // ─── Tool runner ──────────────────────────────────────────────────────────────
 
-function runTool(toolName, args, chart, gender) {
+function runTool(toolName, args, chart, gender, d2, d10) {
   switch (toolName) {
     case "get_naming_reading":        return tool_get_naming_reading(chart);
     case "check_name_compatibility":  return tool_check_name_compatibility(chart, args);
@@ -568,11 +573,13 @@ function runTool(toolName, args, chart, gender) {
     case "check_manglik_dosha":       return tool_check_manglik_dosha(chart);
     case "get_marriage_quality":      return tool_get_marriage_quality(chart);
     case "get_children_reading":      return tool_get_children_reading(chart, args, gender);
-    case "get_wealth_potential":      return tool_get_wealth_potential(chart);
+    case "get_wealth_potential":      return tool_get_wealth_potential(chart, d2);
     case "get_wealth_timing":         return tool_get_wealth_timing(chart);
-    case "get_income_sources":        return tool_get_income_sources(chart);
-    case "get_financial_challenges":  return tool_get_financial_challenges(chart);
-    case "get_overall_prosperity":    return tool_get_overall_prosperity(chart);
+    case "get_income_sources":        return tool_get_income_sources(chart, d10);
+    case "get_financial_challenges":  return tool_get_financial_challenges(chart, d2);
+    case "get_overall_prosperity":    return tool_get_overall_prosperity(chart, d2);
+    case "get_career_fields":         return tool_get_career_fields(chart, d10);
+    case "get_career_role":           return tool_get_career_role(chart, d10);
     default: return { error: `Unknown tool: ${toolName}` };
   }
 }
@@ -591,7 +598,9 @@ TOOL SELECTION:
 - "children / kids / parenthood" -> get_children_reading
 - "how wealthy / financial potential" -> get_wealth_potential
 - "when will I get rich / financial turning point" -> get_wealth_timing
-- "what profession / career / income source" -> get_income_sources
+- "what career field suits me / what industry" -> get_career_fields
+- "what kind of work do I do best / working style / job role" -> get_career_role
+- "what profession / career / income source / where money comes from" -> get_income_sources
 - "financial problems / debt / losses" -> get_financial_challenges
 - "long-term wealth / retirement / overall prosperity" -> get_overall_prosperity
 - "nakshatra / naming syllable" -> get_naming_reading
@@ -634,7 +643,7 @@ module.exports = async (req, res) => {
     catch { return res.status(400).json({ error: "Malformed request body." }); }
   }
 
-  const { chart, messages, gender } = body || {};
+  const { chart, d2, d10, messages, gender } = body || {};
 
   if (!chart) return res.status(400).json({ error: "Missing chart data." });
   if (!Array.isArray(messages) || messages.length === 0) return res.status(400).json({ error: "Missing conversation messages." });
@@ -666,7 +675,7 @@ module.exports = async (req, res) => {
     let toolArgs = {};
     try { toolArgs = JSON.parse(toolCall.function.arguments || "{}"); } catch { /* leave empty */ }
 
-    const toolResult = runTool(toolCall.function.name, toolArgs, chart, gender);
+    const toolResult = runTool(toolCall.function.name, toolArgs, chart, gender, d2 || null, d10 || null);
 
     const round2 = await fetch(GROQ_URL, {
       method: "POST",

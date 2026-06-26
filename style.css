@@ -420,3 +420,31 @@ input:focus-visible {
   font-size: 0.78rem;
   border-top: 1px solid var(--line);
 }
+/* ---------- topic chips ---------- */
+
+.topic-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+
+.chip {
+  background: #fff;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  padding: 0.35rem 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.chip:hover {
+  background: var(--blush, #fdf0f5);
+  border-color: var(--rose, #c97b9a);
+}
