@@ -2,7 +2,7 @@
 
 **Submitted by:** Archi Mangla  
 **Project:** TrustAstrology: Vedic Astrology AI Chat Application  
-**Stack:** Node.js 20, Vercel Serverless, Groq API (`openai/gpt-oss-120b`), astro-engine GraphQL 
+**Stack:** Node.js 20, Vercel Serverless, Groq API (`openai/gpt-oss-120b`), astro-engine GraphQL  
 **URL:** trustastrologyproj.vercel.app
 
 ---
@@ -19,7 +19,7 @@ The AI does not answer from general training knowledge. Every astrological fact 
 
 The central pattern is a **two-round Groq call** in `api/astrologer.js`.
 
-### Round 1 — Tool Selection
+### Round 1 : Tool Selection
 The user's message and conversation history are sent to the LLM along with a list of 15 tool definitions. `tool_choice: "auto"` lets the LLM decide whether a tool is needed and which one fits the question.
 
 ```
@@ -29,7 +29,7 @@ LLM decides → call get_marriage_timing
 
 If no tool is needed (e.g. "what is a nakshatra?"), the LLM replies directly and we return that immediately.
 
-### Round 2 — Result Narration
+### Round 2 : Result Narration
 Once the LLM picks a tool, our JavaScript runs it against the chart data and produces a structured JSON result. That result is sent back to the LLM in a second call (as a `tool` role message). The LLM then writes a focused, plain-language reply based only on that data.
 
 ```
@@ -37,10 +37,10 @@ JS runs get_marriage_timing(chart) → returns { delayIndicators, marriageDashas
 LLM narrates → "Your strongest window is during Mercury or Venus dasha..."
 ```
 
-This keeps hallucination out entirely. The LLM never guesses planetary positions — it only reads what the tool returned.
+This keeps hallucination out entirely. The LLM never guesses planetary positions : it only reads what the tool returned.
 
 ### Why not if-else routing?
-If-else would mean the developer decides which function runs based on keywords. Tool calling lets the LLM decide based on semantic understanding of the full question. This scales — the same pattern works for 15 tools or 500.
+If-else would mean the developer decides which function runs based on keywords. Tool calling lets the LLM decide based on semantic understanding of the full question. This scales : the same pattern works for 15 tools or 500.
 
 ---
 
@@ -50,7 +50,7 @@ Three charts are used:
 
 | Chart | Purpose | When Fetched |
 |-------|---------|--------------|
-| D1 (Lagna) | Main birth chart — all readings base | On form submit |
+| D1 (Lagna) | Main birth chart : all readings base | On form submit |
 | D2 (Hora) | Wealth accumulation tendency | Background fetch after D1 |
 | D10 (Dasamsha) | Career and profession precision | Background fetch after D1 |
 
@@ -68,7 +68,7 @@ D2 and D10 are fetched in parallel in the background immediately after D1 loads.
 | `check_name_compatibility` | Checks if the user's name starts with the correct syllable for their Moon nakshatra and pada |
 | `suggest_names` | Suggests real names starting with the correct syllable, filtered by gender |
 
-**Data source:** `data/nakshatra-table.js` — 27 nakshatras × 4 padas × naming syllable lookup
+**Data source:** `data/nakshatra-table.js` : 27 nakshatras × 4 padas × naming syllable lookup
 
 ### Marriage (5 tools)
 
@@ -78,7 +78,7 @@ D2 and D10 are fetched in parallel in the background immediately after D1 loads.
 | `get_spouse_traits` | Reads the element of the 7th house sign for temperament clues, 7th lord nakshatra for personality, and the house the lord sits in to predict how/where they meet |
 | `check_manglik_dosha` | Checks if Mars is in 1st, 4th, 7th, 8th, or 12th house. Evaluates classical cancellation rules (Mars in own sign, Jupiter aspecting Mars). Returns severity |
 | `get_marriage_quality` | Reads benefics vs malefics in the 7th house, 7th lord in dusthana (6/8/12), and flags divorce risk indicators and remarriage possibility |
-| `get_children_reading` | Analyzes 5th house (children, intellect) — lord placement, occupants, Jupiter as Putrakaraka (children significator), obstacles from Saturn/Ketu/Rahu |
+| `get_children_reading` | Analyzes 5th house (children, intellect) : lord placement, occupants, Jupiter as Putrakaraka (children significator), obstacles from Saturn/Ketu/Rahu |
 
 **Key rules applied:** 7th house = marriage, dusthana = 6th/8th/12th houses cause friction, Saturn delays, Jupiter blesses, Rahu brings unconventional outcomes.
 
@@ -98,8 +98,8 @@ D2 and D10 are fetched in parallel in the background immediately after D1 loads.
 
 | Tool | What it does |
 |------|-------------|
-| `get_career_fields` | Maps the 10th house lord's nakshatra and Moon nakshatra to career industry categories across all 27 nakshatras. Also identifies Atmakaraka (planet with highest degree — soul significator in Jaimini astrology). Uses D10 if available |
-| `get_career_role` | Reads the pada (quarter) of the 10th lord to determine working style: Pada 1 = pioneer/entrepreneur, Pada 2 = executor/finance, Pada 3 = communicator/analyst, Pada 4 = healer/teacher. Also reads Amatyakaraka (2nd highest degree planet — career significator) |
+| `get_career_fields` | Maps the 10th house lord's nakshatra and Moon nakshatra to career industry categories across all 27 nakshatras. Also identifies Atmakaraka (planet with highest degree : soul significator in Jaimini astrology). Uses D10 if available |
+| `get_career_role` | Reads the pada (quarter) of the 10th lord to determine working style: Pada 1 = pioneer/entrepreneur, Pada 2 = executor/finance, Pada 3 = communicator/analyst, Pada 4 = healer/teacher. Also reads Amatyakaraka (2nd highest degree planet : career significator) |
 
 **Data source:** All 27 nakshatras mapped to industries. Pada mapped to Navamsa element (Fire/Earth/Air/Water) which determines role archetype.
 
@@ -118,23 +118,23 @@ D2 and D10 are fetched in parallel in the background immediately after D1 loads.
 The system prompt is built dynamically per request via `buildSystemPrompt(userName)` so the user's name (from the birth form) is always injected. The LLM is told:
 
 - Which tool to pick for which type of question (explicit mapping)
-- Never to answer astrological questions from its own training — always call a tool first
+- Never to answer astrological questions from its own training : always call a tool first
 - To answer in 2-3 sentences max: direct answer first, one supporting reason, one follow-up offer
-- Never to ask the user for their name — it is already in the tool result
+- Never to ask the user for their name : it is already in the tool result
 
 ---
 
 ## Other Technical Decisions
 
-**`readJSON()` helper** — Replaced all `res.json()` calls. The astro-engine API occasionally returns an empty body which causes `.json()` to throw. `readJSON()` reads the raw text first and handles the empty case gracefully.
+**`readJSON()` helper** : Replaced all `res.json()` calls. The astro-engine API occasionally returns an empty body which causes `.json()` to throw. `readJSON()` reads the raw text first and handles the empty case gracefully.
 
-**`maxDuration: 30` in `vercel.json`** — Two sequential Groq calls plus a GraphQL fetch exceeded Vercel's default 10s timeout. Extended to 30s on both functions.
+**`maxDuration: 30` in `vercel.json`** : Two sequential Groq calls plus a GraphQL fetch exceeded Vercel's default 10s timeout. Extended to 30s on both functions.
 
-**Payload limits** — Max 40 messages per conversation, 2000 characters per message. Prevents token overflow crashing the Groq call.
+**Payload limits** : Max 40 messages per conversation, 2000 characters per message. Prevents token overflow crashing the Groq call.
 
-**XSS prevention** — Planet names from the API are rendered into SVG via `innerHTML`. An `escapeHtml()` function sanitizes them before insertion.
+**XSS prevention** : Planet names from the API are rendered into SVG via `innerHTML`. An `escapeHtml()` function sanitizes them before insertion.
 
-**Nakshatra/Rashi aliases** — The astro-engine API returns non-standard spellings (`"anurada"` for Anuradha, `"vruschika"` for Scorpio). Alias maps in `nakshatra-table.js` and `rashi-table.js` handle these transparently.
+**Nakshatra/Rashi aliases** : The astro-engine API returns non-standard spellings (`"anurada"` for Anuradha, `"vruschika"` for Scorpio). Alias maps in `nakshatra-table.js` and `rashi-table.js` handle these transparently.
 
 ---
 
@@ -145,8 +145,8 @@ index.html             Form, chart display, chat UI, topic chip buttons
 style.css              Pastel pink palette, chip styles
 app.js                 Chart rendering (North Indian SVG), chat loop,
                        D2/D10 background fetch, state management
-api/chart.js           POST /api/chart — proxies birth details to astro-engine GraphQL
-api/astrologer.js      POST /api/astrologer — two-round Groq tool calling flow, all 15 tools
+api/chart.js           POST /api/chart : proxies birth details to astro-engine GraphQL
+api/astrologer.js      POST /api/astrologer : two-round Groq tool calling flow, all 15 tools
 data/nakshatra-table.js  27 nakshatras, 4 padas each, naming syllables, alias map
 data/rashi-table.js      12 signs, Sanskrit names, alias map
 vercel.json            maxDuration: 30 on both functions
