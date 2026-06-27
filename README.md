@@ -2,7 +2,7 @@
 
 **Submitted by:** Archi Mangla  
 **Project:** TrustAstrology: Vedic Astrology AI Chat Application  
-**Stack:** Node.js 20, Vercel Serverless, Groq API (`openai/gpt-oss-120b`), astro-engine GraphQL
+**Stack:** Node.js 20, Vercel Serverless, Groq API (`openai/gpt-oss-120b`), astro-engine GraphQL 
 **URL:** trustastrologyproj.vercel.app
 
 ---
